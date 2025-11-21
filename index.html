@@ -2,9 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <!-- iOS向け最適化: viewport-fit=cover を追加して全画面表示に対応 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Misskey.io Client v17</title>
+    <title>Misskey.io Client v18</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -30,17 +29,17 @@
             background-color: #000; 
             color: #e5e7eb; 
             overflow: hidden; 
-            /* iOSのセーフエリア対応 */
-            padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
-            /* iOS特有のバウンススクロールを防止 */
-            overscroll-behavior-y: none;
-            /* タップ時のハイライトを無効化 */
-            -webkit-tap-highlight-color: transparent;
-            /* 長押しメニューなどを抑制（テキスト選択は許可） */
-            -webkit-touch-callout: none;
+            /* Mobile Chromeの動的なアドレスバー対策 */
+            height: 100dvh; 
+            width: 100vw;
         }
         
+        #root {
+            height: 100%;
+            width: 100%;
+        }
+
         .custom-emoji {
             height: 1.3em;
             width: auto;
@@ -61,21 +60,18 @@
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* モバイル用下部余白調整 */
         .mobile-safe-bottom {
             padding-bottom: calc(80px + env(safe-area-inset-bottom));
         }
 
-        /* リンクの色 */
         .link-text {
-            color: #60a5fa; /* blue-400 */
+            color: #60a5fa;
             text-decoration: none;
         }
         .link-text:hover {
             text-decoration: underline;
         }
 
-        /* Tab Styles */
         .filter-tab {
             padding: 8px 4px;
             font-size: 0.75rem;
@@ -105,8 +101,6 @@
             try {
                 if (typeof console !== 'undefined' && typeof console.error === 'function') {
                     console.error(msg, e);
-                } else if (typeof console !== 'undefined' && typeof console.log === 'function') {
-                    console.log("ERROR:", msg, errText);
                 }
             } catch (err) {}
             return errText;
@@ -125,7 +119,7 @@
             static getDerivedStateFromError(error) { return { hasError: true }; }
             componentDidCatch(error, errorInfo) { safeError("ErrorBoundary", error); }
             render() {
-                if (this.state.hasError) return <div className="flex flex-col items-center justify-center h-screen text-center p-4 text-gray-400"><h2 className="text-xl font-bold text-red-500 mb-2">アプリエラー</h2><button onClick={()=>window.location.reload()} className="px-4 py-2 bg-gray-800 rounded text-white">再読み込み</button></div>;
+                if (this.state.hasError) return <div className="flex flex-col items-center justify-center h-full text-center p-4 text-gray-400"><h2 className="text-xl font-bold text-red-500 mb-2">アプリエラー</h2><button onClick={()=>window.location.reload()} className="px-4 py-2 bg-gray-800 rounded text-white">再読み込み</button></div>;
                 return this.props.children;
             }
         }
@@ -168,18 +162,15 @@
 
         const parseNoteText = (text, emojis = []) => {
             if (!text) return null;
-            // URL Regex
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             const emojiMap = new Map(emojis.map(e => [e.name, e.url]));
             
-            // Split by URL first
             const parts = text.split(urlRegex);
             
             return parts.map((part, i) => {
                 if (part.match(urlRegex)) {
                     return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="link-text" onClick={e=>e.stopPropagation()}>{part}</a>;
                 }
-                // Then parse emojis in text parts
                 const subParts = part.split(/(:[a-zA-Z0-9_+-]+:)/g);
                 return subParts.map((sub, j) => {
                     if (sub.startsWith(':') && sub.endsWith(':')) {
@@ -212,7 +203,6 @@
             const current = images[index];
             return (
                 <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-fade-in" onClick={onClose}>
-                    {/* Close Button positioned safely */}
                     <button onClick={onClose} className="absolute top-8 right-4 text-gray-400 hover:text-white z-50 p-2 bg-black/50 rounded-full"><Icons.X size={32}/></button>
                     {images.length > 1 && <button onClick={(e) => { e.stopPropagation(); setIndex((index - 1 + images.length) % images.length); }} className="absolute left-2 text-gray-400 hover:text-white p-2"><Icons.ChevronLeft /></button>}
                     <div className="max-w-full max-h-full p-2 flex flex-col items-center" onClick={e => e.stopPropagation()}>
@@ -515,7 +505,7 @@
 
             return (
                 <ErrorBoundary>
-                    <div className="flex flex-col md:flex-row h-screen w-screen bg-black text-gray-200 font-sans overflow-hidden" style={{'--theme-color': themeColor}}>
+                    <div className="flex flex-col md:flex-row h-full w-full bg-black text-gray-200 font-sans overflow-hidden" style={{'--theme-color': themeColor}}>
                         {viewerState && <ImageViewer images={viewerState.images} initialIndex={viewerState.index} onClose={() => setViewerState(null)} />}
                         
                         <div className={`flex-col h-full bg-gray-950 border-r border-gray-800 ${activeTab === 'timeline' ? 'flex w-full' : 'hidden'} md:flex md:w-1/2`}>
@@ -524,6 +514,7 @@
                                     <button key={t} onClick={() => setTlType(t)} className={`flex-1 font-bold uppercase text-sm flex items-center justify-center gap-2 ${tlType === t ? 'bg-white/5' : 'text-gray-500'}`} style={tlType === t ? {color:themeColor, borderBottom:`2px solid ${themeColor}`} : {}}>{t}</button>
                                 ))}
                                 <button onClick={() => loadTimeline("reload")} className="px-4 hover:text-white text-gray-500"><Icons.Refresh /></button>
+                                <button onClick={() => setShowSettings(true)} className="px-4 hover:text-white text-gray-500 md:block hidden"><Icons.Settings /></button>
                             </div>
                             <div className="flex-1 overflow-y-auto mobile-safe-bottom">
                                 {leftNotes.map(n => <Note key={n.id} note={n} onClickUser={u => {setSelectedUser(u); setActiveTab('user');}} onAction={handleAction} onViewImage={(imgs, i) => setViewerState({images: imgs, index: i})} themeColor={themeColor} myUser={myUser} />)}
